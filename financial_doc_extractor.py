@@ -15,8 +15,8 @@ import traceback
 from datetime import datetime
 
 # Third-party imports
-import fitz  # PyMuPDF
-import PyMuPDF
+# import fitz  # PyMuPDF
+import pymupdf as fitz
 import easyocr
 from openai import OpenAI
 import cv2
