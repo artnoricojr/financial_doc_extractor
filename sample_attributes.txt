@@ -1,0 +1,35 @@
+# Sample Information Attributes for Annuity Policy Compliance Review
+# One attribute per line - customize based on your specific requirements
+
+Policy Number
+Policyholder Name
+Policyholder Date of Birth
+Policyholder Age
+Policyholder Social Security Number
+Policyholder Address
+Annual Income
+Net Worth
+Investment Objectives
+Risk Tolerance
+Time Horizon
+Liquidity Needs
+Investment Experience
+Annuity Product Type
+Premium Amount
+Surrender Period
+Surrender Charges
+Death Benefit
+Guaranteed Minimum Withdrawal Benefit
+Annual Percentage Rate
+Sales Representative Name
+Sales Representative License Number
+Date of Application
+Date of Policy Issue
+Replacement Transaction Indicator
+Prior Annuity Information
+Suitability Determination
+Customer Acknowledgment Signature
+Sales Representative Signature
+Compliance Officer Review
+Medical Underwriting Results
+Financial Suitability Score
