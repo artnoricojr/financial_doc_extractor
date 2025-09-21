@@ -16,6 +16,7 @@ from datetime import datetime
 
 # Third-party imports
 import fitz  # PyMuPDF
+#from PyMuPDF import fitz
 import easyocr
 from openai import OpenAI
 import cv2
