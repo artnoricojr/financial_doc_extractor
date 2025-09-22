@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-version 05
 Financial Document Information Extractor for Compliance Review
 Extracts specified information attributes from PDF documents using OCR and LLM processing.
 """
@@ -16,7 +15,8 @@ import traceback
 from datetime import datetime
 
 # Third-party imports
-import fitz  # PyMuPDF
+# import fitz  # PyMuPDF
+import pymupdf as fitz
 import easyocr
 from openai import OpenAI
 import cv2
@@ -38,7 +38,6 @@ class DocumentProcessor:
         """
         self.enable_ocr = enable_ocr
         self.enable_llm = enable_llm
-        self.custom_prompt_text = None
         
         # Initialize OpenAI client
         if enable_llm:
@@ -61,16 +60,6 @@ class DocumentProcessor:
             'llm_calls': 0,
             'errors': 0
         }
-    
-    def load_custom_prompt(self, prompt_file: str) -> None:
-        """Load custom prompt template from file."""
-        try:
-            with open(prompt_file, 'r', encoding='utf-8') as f:
-                self.custom_prompt_text = f.read()
-            logging.info(f"Loaded custom prompt template from {prompt_file}")
-        except Exception as e:
-            logging.error(f"Failed to load custom prompt file {prompt_file}: {e}")
-            raise
     
     def load_target_attributes(self, attributes_file: str) -> List[str]:
         """Load target information attributes from text file."""
@@ -123,18 +112,10 @@ class DocumentProcessor:
             logging.warning(f"OCR failed on page: {e}")
             return ""
     
-    def create_extraction_prompt(self, text: str, target_attributes: List[str], custom_prompt_text: str = None) -> str:
+    def create_extraction_prompt(self, text: str, target_attributes: List[str]) -> str:
         """Create a detailed prompt for LLM extraction."""
         attributes_xml = "\n".join([f"    <attribute>{attr}</attribute>" for attr in target_attributes])
         
-        if custom_prompt_text:
-            # Use custom prompt template, replacing placeholders
-            prompt = custom_prompt_text.replace("{attributes_xml}", attributes_xml)
-            prompt = prompt.replace("{text}", text)
-            prompt = prompt.replace("{document_text}", text)  # Alternative placeholder
-            return prompt
-        
-        # Default prompt template
         prompt = f"""
 <task>
 You are a Financial Services Compliance Officer assistant. Extract specific information attributes from the provided document text with absolute accuracy.
@@ -181,7 +162,7 @@ Extract the requested information now:
             return {"extracted_data": [], "processing_notes": "LLM processing disabled"}
         
         try:
-            prompt = self.create_extraction_prompt(text, target_attributes, self.custom_prompt_text)
+            prompt = self.create_extraction_prompt(text, target_attributes)
             
             response = self.openai_client.chat.completions.create(
                 model="gpt-4-turbo-preview",  # Use latest GPT-4 model
@@ -373,7 +354,6 @@ def main():
     parser.add_argument('--input-dir', required=True, help='Input directory containing PDF files')
     parser.add_argument('--output-dir', required=True, help='Output directory for results')
     parser.add_argument('--attributes-file', required=True, help='Text file containing target attributes')
-    parser.add_argument('--prompt-file', help='Text file containing custom prompt template')
     parser.add_argument('--openai-api-key', help='OpenAI API key (or set OPENAI_API_KEY env var)')
     parser.add_argument('--enable-ocr', action='store_true', default=True, help='Enable OCR processing')
     parser.add_argument('--disable-ocr', action='store_true', help='Disable OCR processing')
@@ -404,17 +384,11 @@ def main():
             enable_llm=enable_llm
         )
         
-        # Load custom prompt if provided
-        if args.prompt_file:
-            processor.load_custom_prompt(args.prompt_file)
-        
         # Load target attributes
         target_attributes = processor.load_target_attributes(args.attributes_file)
         
         # Process documents
         logging.info(f"Starting processing with OCR={'enabled' if enable_ocr else 'disabled'}, LLM={'enabled' if enable_llm else 'disabled'}")
-        if args.prompt_file:
-            logging.info(f"Using custom prompt template from {args.prompt_file}")
         results = processor.process_directory(args.input_dir, target_attributes)
         
         # Generate exception log

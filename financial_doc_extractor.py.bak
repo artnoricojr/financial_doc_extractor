@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-version 05
 Financial Document Information Extractor for Compliance Review
 Extracts specified information attributes from PDF documents using OCR and LLM processing.
 """
