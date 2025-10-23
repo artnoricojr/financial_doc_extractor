@@ -1,0 +1,8 @@
+
+
+python financial_doc_extractor.py \
+    --input-dir /c/Users/anori/Documents/PDF-Image_Samples/Sources \
+    --output-dir /c/Users/anori/Documents/PDF-Image_Samples/Output/01 \
+    --attributes-file attributes.txt \
+    --prompt-file ./prompts/pdf_form_extraction_prompt.md.txt \
+    --disable-llm
