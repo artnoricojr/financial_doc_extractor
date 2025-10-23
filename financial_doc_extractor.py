@@ -29,6 +29,7 @@ HANDWRITING DETECTION APPROACH:
 """
 
 import argparse
+import csv
 import json
 import logging
 import os
@@ -491,11 +492,11 @@ Extract the requested information now:
     def generate_exception_log(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Generate exception log from processing results."""
         exceptions = []
-        
+
         for result in results:
             # Check for various exception conditions
             exception_entry = None
-            
+
             if result.get('field_value') == 'UNCLEAR':
                 exception_entry = {
                     'file_name': result['file_name'],
@@ -506,7 +507,7 @@ Extract the requested information now:
                     'exception_notes': result.get('exception_notes', ''),
                     'timestamp': datetime.now().isoformat()
                 }
-            
+
             elif result.get('field_value') == 'NOT_FOUND':
                 exception_entry = {
                     'file_name': result['file_name'],
@@ -517,7 +518,7 @@ Extract the requested information now:
                     'exception_notes': result.get('exception_notes', ''),
                     'timestamp': datetime.now().isoformat()
                 }
-            
+
             elif result.get('confidence') == 'LOW':
                 exception_entry = {
                     'file_name': result['file_name'],
@@ -528,7 +529,7 @@ Extract the requested information now:
                     'exception_notes': result.get('exception_notes', ''),
                     'timestamp': datetime.now().isoformat()
                 }
-            
+
             elif result.get('exception_notes'):
                 exception_entry = {
                     'file_name': result['file_name'],
@@ -539,11 +540,110 @@ Extract the requested information now:
                     'exception_notes': result.get('exception_notes', ''),
                     'timestamp': datetime.now().isoformat()
                 }
-            
+
             if exception_entry:
                 exceptions.append(exception_entry)
-        
+
         return exceptions
+
+    def save_results_to_csv(self, results: List[Dict[str, Any]], csv_file_path: str) -> None:
+        """
+        Save extraction results to CSV file.
+
+        Args:
+            results: List of extraction result dictionaries
+            csv_file_path: Path to output CSV file
+        """
+        if not results:
+            logging.warning("No results to save to CSV")
+            return
+
+        try:
+            # Define CSV column headers
+            fieldnames = [
+                'file_name',
+                'page_number',
+                'field_label',
+                'field_value',
+                'location_description',
+                'confidence',
+                'derived-from-handwriting',
+                'exception_notes',
+                'processing_notes'
+            ]
+
+            with open(csv_file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+
+                # Write header
+                writer.writeheader()
+
+                # Write data rows
+                for result in results:
+                    writer.writerow(result)
+
+            logging.info(f"Results saved to CSV: {csv_file_path}")
+
+        except Exception as e:
+            logging.error(f"Failed to save results to CSV: {e}")
+            raise
+
+    def save_exceptions_to_csv(self, exceptions: List[Dict[str, Any]], csv_file_path: str) -> None:
+        """
+        Save exception log to CSV file.
+
+        Args:
+            exceptions: List of exception dictionaries
+            csv_file_path: Path to output CSV file
+        """
+        if not exceptions:
+            logging.warning("No exceptions to save to CSV")
+            # Create empty CSV file with headers
+            try:
+                fieldnames = [
+                    'file_name',
+                    'page_number',
+                    'field_label',
+                    'issue_type',
+                    'description',
+                    'exception_notes',
+                    'timestamp'
+                ]
+                with open(csv_file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    writer.writeheader()
+                logging.info(f"Empty exception CSV created: {csv_file_path}")
+            except Exception as e:
+                logging.error(f"Failed to create empty exception CSV: {e}")
+            return
+
+        try:
+            # Define CSV column headers
+            fieldnames = [
+                'file_name',
+                'page_number',
+                'field_label',
+                'issue_type',
+                'description',
+                'exception_notes',
+                'timestamp'
+            ]
+
+            with open(csv_file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+
+                # Write header
+                writer.writeheader()
+
+                # Write data rows
+                for exception in exceptions:
+                    writer.writerow(exception)
+
+            logging.info(f"Exceptions saved to CSV: {csv_file_path}")
+
+        except Exception as e:
+            logging.error(f"Failed to save exceptions to CSV: {e}")
+            raise
 
 def setup_logging(output_dir: str) -> None:
     """Set up logging configuration."""
@@ -611,18 +711,26 @@ def main():
         
         # Generate exception log
         exceptions = processor.generate_exception_log(results)
-        
-        # Save results
+
+        # Save results in both JSON and CSV formats
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        
-        results_file = os.path.join(args.output_dir, f"extraction_results_{timestamp}.json")
-        with open(results_file, 'w', encoding='utf-8') as f:
+
+        # Save JSON files
+        results_json_file = os.path.join(args.output_dir, f"extraction_results_{timestamp}.json")
+        with open(results_json_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
-        
-        exceptions_file = os.path.join(args.output_dir, f"exception_log_{timestamp}.json")
-        with open(exceptions_file, 'w', encoding='utf-8') as f:
+
+        exceptions_json_file = os.path.join(args.output_dir, f"exception_log_{timestamp}.json")
+        with open(exceptions_json_file, 'w', encoding='utf-8') as f:
             json.dump(exceptions, f, indent=2, ensure_ascii=False)
-        
+
+        # Save CSV files
+        results_csv_file = os.path.join(args.output_dir, f"extraction_results_{timestamp}.csv")
+        processor.save_results_to_csv(results, results_csv_file)
+
+        exceptions_csv_file = os.path.join(args.output_dir, f"exception_log_{timestamp}.csv")
+        processor.save_exceptions_to_csv(exceptions, exceptions_csv_file)
+
         # Print summary
         stats = processor.stats
         logging.info("=" * 50)
@@ -635,8 +743,12 @@ def main():
         logging.info(f"Errors: {stats['errors']}")
         logging.info(f"Total records extracted: {len(results)}")
         logging.info(f"Exception records: {len(exceptions)}")
-        logging.info(f"Results saved to: {results_file}")
-        logging.info(f"Exceptions saved to: {exceptions_file}")
+        logging.info("")
+        logging.info("OUTPUT FILES:")
+        logging.info(f"  Results (JSON): {results_json_file}")
+        logging.info(f"  Results (CSV):  {results_csv_file}")
+        logging.info(f"  Exceptions (JSON): {exceptions_json_file}")
+        logging.info(f"  Exceptions (CSV):  {exceptions_csv_file}")
         
     except KeyboardInterrupt:
         logging.info("Processing interrupted by user")
